@@ -1,63 +1,84 @@
-{$M $1000,0,0,0}
+{$M $3000,0,0,0}
 {Music, clocks, prime numbers, textbanner}
 program course;
-uses dos, crt, sounds, clocks, term;
+uses dos, crt, sounds, clocks, term, queue, producer, consumer, ticker;
+
 var
     oldTimerHandler: procedure;
     oldKeyHandler: procedure;
     counter: word;
-
-
-procedure render;
-begin
-    textBackGround(Black);
-    clrScr;
-
-    window(2, 2, 38, 17);
-    textBackGround(Red);
-    clrScr;
-    textColor(White);
-    gotoXY(3, 1);
-    write('process one');
-    window(3, 3, 37, 16);
-    textBackGround(Black);
-    clrScr;
-
-    window(40, 2, 79, 17);
-    textBackGround(Yellow);
-    clrScr;
-    textColor(White);
-    gotoXY(4, 1);
-    write('states 2');
-    window(41, 3, 78, 16);
-    textBackGround(Black);
-    clrScr;
-
-    writeLine('stream  1:', 3, 3);
-    writeLine('stream 2:', 3, 4);
-    writeLine('stream 1:', 41, 3);
-    writeLine('stream 4 :', 41, 4);
-
-    {usage}
-
-    window(1, 18, 80, 24);
-    textBackGround(LightGray);
-    clrScr;
-end;
+    flagExit, flagKeyboard, flagTimer: boolean;
+    producerInstance: TProducer;
+    consumerInstance: TConsumer;
+    tickerInstance: TTicker;
+    tickerInstance2: TTicker;
+    clocksInstance: TClocks;
+    soundInstance: TSound;
+    numbersQueue: PTQueue;
 
 {$F+}
+procedure destruct;
+begin
+    soundInstance.disable;
+    setIntVec($8, addr(oldTimerHandler));
+    setIntVec($9, addr(oldKeyHandler));
+    window(1, 1, 80, 25);
+    textBackGround(Black);
+    textColor(White);
+    clrScr;
+    halt;
+end;
+
 procedure timerHandler; interrupt;
+var clockTime:string;
 begin
     inc(counter);
-    clocksTimer;
-    soundTimer;
-    printClock;
+
+    if (flagTimer) then
+    begin
+        inline($9C);
+        oldTimerHandler;
+    end;
+
+    flagTimer := true;
+
+    clocksInstance.iteration;
+    soundInstance.iteration;
+    tickerInstance.iteration;
+    flagTimer := false;
     inline($9C);
     oldTimerHandler;
 end;
 
 procedure keyHandler; interrupt;
+var
+    keyCode: word;
+    special: byte absolute $40:$17;
 begin
+    if (flagKeyboard) then
+    begin
+        inline($9C);
+        oldKeyHandler;
+        exit;
+    end;
+
+    flagKeyboard := true;
+    keyCode := Port[$60];
+
+    if ((keyCode = KEY_T) and (special = KEY_CTRL)) then
+        if (clocksInstance.getState = ACTIVE) then clocksInstance.disable else clocksInstance.enable;
+
+    if ((keyCode = KEY_W) and (special = KEY_CTRL)) then
+        if (soundInstance.getState = ACTIVE) then soundInstance.disable else soundInstance.enable;
+
+
+    if ((keyCode = KEY_ESC) or (keyCode = KEY_Q)) then
+    begin
+        flagExit := false;
+    end;
+
+    flagKeyboard := false;
+
     inline($9C);
     oldKeyHandler;
 end;
@@ -65,30 +86,51 @@ end;
 
 procedure construct;
 begin
+    flagKeyboard := false;
+    flagTimer := false;
     getIntVec($8, @oldTimerHandler);
     getIntVec($9, @oldKeyHandler);
     setIntVec($8, addr(timerHandler));
     setIntVec($9, addr(keyHandler));
-    enableSound;
 end;
 
-
-procedure destruct;
+var
+    readed_clock_x, readed_clock_y: word;
+    error_code_clock_x: integer;
 begin
-    disableSound;
-    setIntVec($8, addr(oldTimerHandler));
-    setIntVec($9, addr(oldKeyHandler));
-    window(1, 1, 80, 25);
-    textBackGround(Black);
-    clrScr;
-    halt;
-end;
-
-begin
-    construct;
+    val(ParamStr(1), readed_clock_x, error_code_clock_x);
+    flagExit := true;
     render;
-    setXYClock(5, 5);
-    readkey;
+
+    clocksInstance.construct(readed_clock_x * 3, readed_clock_x);
+    clocksInstance.enable;
+
+    new(numbersQueue);
+    numbersQueue^.construct;
+    numbersQueue^.setMaxLength(5);
+
+    producerInstance.construct(numbersQueue);
+    producerInstance.enable;
+
+    consumerInstance.construct(numbersQueue);
+    consumerInstance.enable;
+
+    tickerInstance.construct('Evgeniy Vasilev. Student of SIBSUTIs, member of group ZP-51', TICKER_TOP, 80);
+    tickerInstance.enable;
+
+    tickerInstance2.construct('Same Message', TICKER_BOTTOM, 30);
+    tickerInstance2.enable;
+
+    soundInstance.construct;
+
+    construct;
+    while (flagExit) do
+    begin
+        {producerInstance.iteration(3);}
+        consumerInstance.iteration(2);
+        {tickerInstance2.iteration;}
+        delay(100);
+    end;
+
     destruct;
-    {keep(0);}
 end.
