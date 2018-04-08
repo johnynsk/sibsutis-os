@@ -6,7 +6,7 @@ type
 PTQueueRecord = ^TQueueRecord;
 TQueueRecord = record
     next: PTQueueRecord;
-    value: integer;
+    value: longint;
 end;
 
 PTQueue = ^TQueue;
@@ -15,8 +15,8 @@ private
   length, maxLength: word;
   head, tail: PTQueueRecord;
 public
-  procedure push(const newValue: integer);
-  function pop: integer;
+  procedure push(const newValue: longint);
+  function pop: longint;
   function isEmpty: boolean;
   function isFull: boolean;
   function getHead: PTQueueRecord;
@@ -31,7 +31,7 @@ uses crt, dos;
 
 const MAX_LENGTH_DEFAULT = 20;
 
-procedure TQueue.push(const newValue: integer);
+procedure TQueue.push(const newValue: longint);
 var
     item: PTQueueRecord;
 begin
@@ -50,7 +50,9 @@ begin
     end;
 end;
 
-function TQueue.pop: integer;
+function TQueue.pop: longint;
+var
+    item: PTQueueRecord;
 begin
     if (head = nil) then
     begin
@@ -58,8 +60,10 @@ begin
         exit;
     end;
 
-    pop := head^.value;
+    item := head;
+    pop := item^.value;
     head := head^.next;
+    dispose(item);
     dec(length);
 end;
 

@@ -9,7 +9,7 @@ TConsumer = Object
 private
     state, oldState: Tstatus;
     queue: PTQueue;
-    writed: integer;
+    writed: word;
 public
     procedure iteration(const availableOps: word);
     procedure enable;
@@ -25,7 +25,7 @@ uses crt, dos;
 procedure TConsumer.iteration(const availableOps: word);
 var
     remainingOps: word;
-    readedNumber: integer;
+    readedNumber: longint;
 begin
     if (state = INACTIVE) then exit;
 

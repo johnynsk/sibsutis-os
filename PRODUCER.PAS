@@ -3,20 +3,19 @@ unit producer;
 interface
 uses term, queue;
 type
+
 PTProducer = ^TProducer;
-TProducer = Object
+TProducer = object(TStream)
 private
-    state, oldState: Tstatus;
-    currentNumber: integer;
-    currentDividor: integer;
-    maxDividor: integer;
+    currentNumber: longint;
+    currentDividor: longint;
+    maxDividor: longint;
     queue: PTQueue;
     procedure increaseNumber(isCurrentPrime: boolean);
 public
     procedure iteration(const availableOps: word);
     procedure enable;
     procedure disable;
-    function getState: TStatus;
     constructor construct(newQueue: PTQueue);
 end;
 
@@ -86,11 +85,6 @@ begin
       state := INACTIVE;
       oldState := state;
   end;
-end;
-
-function TProducer.getState: TStatus;
-begin
-    getState := state;
 end;
 
 constructor TProducer.construct(newQueue: PTQueue);

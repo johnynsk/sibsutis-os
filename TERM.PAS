@@ -2,14 +2,38 @@ unit term;
 
 interface
 type
-    Tstatus = (ACTIVE, WAITING, INACTIVE);
-    TVideoCell = record
-        symbol: char;
-        attr: byte;
-    end;
-    PTVideoRow = ^TVideoRow;
-    TVideoRow = array[1 .. 80] of TVideoCell;
-    TVideoMemory = array[1 .. 25] of TVideoRow;
+
+Tstatus = (ACTIVE, WAITING, INACTIVE);
+TVideoCell = record
+    symbol: char;
+    attr: byte;
+end;
+PTVideoRow = ^TVideoRow;
+TVideoRow = array[1 .. 80] of TVideoCell;
+TVideoMemory = array[1 .. 25] of TVideoRow;
+
+TStreamInfo = record
+    streamName: string[10];
+    toggleKey: string[2];
+    haveSpeed: boolean;
+
+    positionX: integer;
+    positionY: integer;
+
+    decreaseSpeedKey: string[2];
+    increaseSpeedKey: string[2];
+    currentSpeed: string[2];
+end;
+
+TStream = Object
+public
+    state:TStatus;
+    oldState: Tstatus;
+public
+    procedure enable;
+    procedure disable;
+    function getState: TStatus;
+end;
 
 const
     KEY_CTRL = 4;
@@ -89,13 +113,20 @@ begin
     end;
 end;
 
+procedure printStreamInfo(streamInfo: TStreamInfo);
+var
+    VideoMemory: TVideoMemory absolute $b800:$0000;
+begin
+    {if (streamInfo.)}
+end;
+
 procedure render;
 begin
-    textBackGround(Black);
+    {textBackGround(Black);
     clrScr;
 
     printGrid;
-
+}
 
     {
     window(2, 2, 38, 17);
@@ -121,13 +152,31 @@ begin
     clrScr;
     writeLine('stream 1:', 41, 3);
     writeLine('stream 4 :', 41, 4);
-
+}
     {usage}
-
-    window(2, 18, 79, 24);
+{
+    window(3, 16, 78, 24);
     textBackGround(LightGray);
     textColor(Black);
-    clrScr;
+    clrScr;}
 end;
+
+procedure TStream.enable;
+begin
+    state := ACTIVE;
+end;
+
+procedure TStream.disable;
+begin
+    state := INACTIVE;
+end;
+
+function TStream.getState: TStatus;
+begin
+    getState := state;
+end;
+
+
+begin
 
 end.

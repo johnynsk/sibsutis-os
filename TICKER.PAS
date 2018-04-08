@@ -8,11 +8,10 @@ PTTicker = ^TTicker;
 TTicker = Object
 private
     state: Tstatus;
-    message: string[80];
+    message: string[110];
     messageLength: byte;
     startX, startY: integer;
     tickDelay: integer;
-    someVar: integer;
     counter: word;
     screenPosition: TPosition;
     oldVideoRow: PTVideoRow;
@@ -20,7 +19,6 @@ private
 public
     procedure iteration;
     procedure setTickDelay(newTickDelay: integer);
-    procedure setSomeVar;
     function getTickDelay: integer;
     procedure enable;
     procedure disable;
@@ -69,11 +67,6 @@ begin
     tickDelay := 9;
 end;
 
-procedure TTicker.setSomeVar;
-begin
-
-end;
-
 function TTicker.getTickDelay: integer;
 begin
     getTickDelay := tickDelay;
@@ -98,9 +91,9 @@ constructor TTicker.construct(newMessage: string; newScreenPosition: TPosition; 
 begin
     new(oldVideoRow);
     screenPosition := newScreenPosition;
-    if (screenPosition = TICKER_TOP) then startY := 1 else startY := 25;
+    if (screenPosition = TICKER_TOP) then startY := 18 else startY := 25;
     startX := newStartX;
-    tickDelay := 20;
+    tickDelay := 4;
     counter := 0;
     message := newMessage;
     messageLength := length(newMessage);

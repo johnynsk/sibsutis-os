@@ -1,4 +1,4 @@
-{$M $3000,0,0,0}
+{$M 16384,0,655360}
 {Music, clocks, prime numbers, textbanner}
 program course;
 uses dos, crt, sounds, clocks, term, queue, producer, consumer, ticker;
@@ -11,7 +11,6 @@ var
     producerInstance: TProducer;
     consumerInstance: TConsumer;
     tickerInstance: TTicker;
-    tickerInstance2: TTicker;
     clocksInstance: TClocks;
     soundInstance: TSound;
     numbersQueue: PTQueue;
@@ -97,6 +96,7 @@ end;
 var
     readed_clock_x, readed_clock_y: word;
     error_code_clock_x: integer;
+    message: string;
 begin
     val(ParamStr(1), readed_clock_x, error_code_clock_x);
     flagExit := true;
@@ -115,18 +115,17 @@ begin
     consumerInstance.construct(numbersQueue);
     consumerInstance.enable;
 
-    tickerInstance.construct('Evgeniy Vasilev. Student of SIBSUTIs, member of group ZP-51', TICKER_TOP, 80);
+    message := 'Evgeniy Vasilev. Student of SIBSUTIs, member of group ZP-51';
+    tickerInstance.construct(message, TICKER_TOP, 80);
+    tickerInstance.setTickDelay(4);
     tickerInstance.enable;
-
-    tickerInstance2.construct('Same Message', TICKER_BOTTOM, 30);
-    tickerInstance2.enable;
 
     soundInstance.construct;
 
     construct;
     while (flagExit) do
     begin
-        {producerInstance.iteration(3);}
+        producerInstance.iteration(3);
         consumerInstance.iteration(2);
         {tickerInstance2.iteration;}
         delay(100);
