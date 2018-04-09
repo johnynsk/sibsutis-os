@@ -3,7 +3,6 @@ unit term;
 interface
 type
 
-Tstatus = (ACTIVE, WAITING, INACTIVE);
 TVideoCell = record
     symbol: char;
     attr: byte;
@@ -11,29 +10,6 @@ end;
 PTVideoRow = ^TVideoRow;
 TVideoRow = array[1 .. 80] of TVideoCell;
 TVideoMemory = array[1 .. 25] of TVideoRow;
-
-TStreamInfo = record
-    streamName: string[10];
-    toggleKey: string[2];
-    haveSpeed: boolean;
-
-    positionX: integer;
-    positionY: integer;
-
-    decreaseSpeedKey: string[2];
-    increaseSpeedKey: string[2];
-    currentSpeed: string[2];
-end;
-
-TStream = Object
-public
-    state:TStatus;
-    oldState: Tstatus;
-public
-    procedure enable;
-    procedure disable;
-    function getState: TStatus;
-end;
 
 const
     KEY_CTRL = 4;
@@ -47,6 +23,7 @@ procedure writeLine(const str: string; const x, y: integer; color: byte);
 procedure printGrid;
 procedure render;
 procedure copyRow(rowNumber: word; result: PTVideoRow);
+function getKeyChar: string;
 
 implementation
 
@@ -79,13 +56,6 @@ begin
     result^ := row;
 end;
 
-procedure printUsage;
-var
-    memory: TVideoMemory absolute $b800:$0000;
-begin
-
-end;
-
 procedure printGrid;
 var
     x, y: word;
@@ -113,20 +83,24 @@ begin
     end;
 end;
 
-procedure printStreamInfo(streamInfo: TStreamInfo);
+function getKeyChar: String;
 var
-    VideoMemory: TVideoMemory absolute $b800:$0000;
+    special: byte absolute $40:$17;
+    keyCode: word;
 begin
-    {if (streamInfo.)}
+    getKeyChar := '';
+    case keyCode of
+        KEY_Q: getKeyChar := 'q';
+    end;
 end;
 
 procedure render;
 begin
-    {textBackGround(Black);
+    textBackGround(Black);
     clrScr;
 
     printGrid;
-}
+{}
 
     {
     window(2, 2, 38, 17);
@@ -154,28 +128,12 @@ begin
     writeLine('stream 4 :', 41, 4);
 }
     {usage}
-{
+
     window(3, 16, 78, 24);
     textBackGround(LightGray);
     textColor(Black);
-    clrScr;}
+    clrScr;
 end;
-
-procedure TStream.enable;
-begin
-    state := ACTIVE;
-end;
-
-procedure TStream.disable;
-begin
-    state := INACTIVE;
-end;
-
-function TStream.getState: TStatus;
-begin
-    getState := state;
-end;
-
 
 begin
 

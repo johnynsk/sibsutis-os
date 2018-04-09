@@ -1,21 +1,18 @@
 unit sounds;
 
 interface
-uses term;
+uses stream;
 
 type
     PTSound = ^TSound;
-    TSound = Object
+    TSound = Object(TStream)
     private
-        state: Tstatus;
         counter: word;
         procedure playSongSnowTree;
         function frequency(semitone: integer): integer;
     public
-        procedure iteration;
-        procedure enable;
-        procedure disable;
-        function getState: TStatus;
+        procedure iteration; virtual;
+        procedure disable; virtual;
         constructor construct;
     end;
 
@@ -67,7 +64,7 @@ const
 
 procedure TSound.iteration;
 begin
-    if (state = INACTIVE) then exit;
+    if (state <> ACTIVE) then exit;
     inc(counter);
     playSongSnowTree;
 end;
@@ -135,21 +132,10 @@ begin
 
 	frequency := round(result);
 end;
-
-procedure TSound.enable;
-begin
-    state := ACTIVE;
-end;
-
 procedure TSound.disable;
 begin
     state := INACTIVE;
     nosound;
-end;
-
-function TSound.getState: TStatus;
-begin
-    getState := state;
 end;
 
 constructor TSound.construct;

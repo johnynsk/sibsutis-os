@@ -2,19 +2,18 @@ unit consumer;
 
 
 interface
-uses term, queue;
+uses stream, queue;
 type
 PTConsumer = ^TConsumer;
-TConsumer = Object
+TConsumer = Object(TStream)
 private
-    state, oldState: Tstatus;
     queue: PTQueue;
     writed: word;
 public
-    procedure iteration(const availableOps: word);
-    procedure enable;
-    procedure disable;
-    function getState: TStatus;
+    procedure runIterations(const availableOps: word);
+    procedure iteration; virtual;
+    procedure enable; virtual;
+    procedure disable; virtual;
     constructor construct(newQueue: PTQueue);
 end;
 
@@ -22,30 +21,36 @@ end;
 implementation
 uses crt, dos;
 
-procedure TConsumer.iteration(const availableOps: word);
+procedure TConsumer.runIterations(const availableOps: word);
 var
     remainingOps: word;
+begin
+    remainingOps := availableOps;
+
+    while (remainingOps > 0) do
+    begin
+        dec(remainingOps);
+        iteration;
+    end;
+end;
+
+procedure TConsumer.iteration;
+var
     readedNumber: longint;
 begin
     if (state = INACTIVE) then exit;
 
-    remainingOps := availableOps;
-    while (remainingOps > 0) do
+    if (queue^.isEmpty) then
     begin
-        dec(remainingOps);
-
-        if (queue^.isEmpty) then
-        begin
-            state := WAITING;
-            continue;
-        end;
-
-        state := ACTIVE;
-        readedNumber := queue^.pop;
-        if (writed > 0) then write(', ');
-        write(readedNumber);
-        inc(writed);
+        state := WAITING;
+        exit;
     end;
+
+    state := ACTIVE;
+    readedNumber := queue^.pop;
+    if (writed > 0) then write(', ');
+    write(readedNumber);
+    inc(writed);
 end;
 
 procedure TConsumer.enable;
@@ -60,11 +65,6 @@ begin
         state := INACTIVE;
         oldState := state;
     end;
-end;
-
-function TConsumer.getState: TStatus;
-begin
-    getState := state;
 end;
 
 constructor TConsumer.construct(newQueue: PTQueue);

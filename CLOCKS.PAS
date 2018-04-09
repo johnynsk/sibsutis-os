@@ -1,45 +1,25 @@
 unit clocks;
 
 interface
-uses term;
+uses stream;
 
 type
   PTClocks = ^TClocks;
-  TClocks = Object
+  TClocks = Object(TStream)
   private
       hour, min, sec, usec, oldSec: word;
-      state: Tstatus;
       counter: word;
       posX, posY: word;
-      procedure increment;
       function leadZero(val: word): string;
+      procedure increment;
   public
-      procedure iteration;
-      procedure enable;
-      procedure disable;
-      function getState: TStatus;
+      procedure iteration; virtual;
       constructor construct(newPosX, newPosY: word);
   end;
 
 implementation
 
-uses dos, crt;
-
-procedure TClocks.enable;
-begin
-    state := ACTIVE;
-end;
-
-procedure TClocks.disable;
-begin
-    state := INACTIVE;
-end;
-
-function TClocks.getState: TStatus;
-begin
-    getState := state;
-end;
-
+uses dos, crt, term;
 function TClocks.leadZero(val: word): string;
 var
     strValue: string[2];

@@ -1,7 +1,7 @@
 unit producer;
 
 interface
-uses term, queue;
+uses stream, queue;
 type
 
 PTProducer = ^TProducer;
@@ -13,9 +13,10 @@ private
     queue: PTQueue;
     procedure increaseNumber(isCurrentPrime: boolean);
 public
-    procedure iteration(const availableOps: word);
-    procedure enable;
-    procedure disable;
+    procedure runIterations(const availableOps: word);
+    procedure iteration; virtual;
+    procedure enable; virtual;
+    procedure disable; virtual;
     constructor construct(newQueue: PTQueue);
 end;
 
@@ -23,9 +24,19 @@ end;
 implementation
 uses crt, dos;
 
-procedure TProducer.iteration(const availableOps: word);
+procedure TProducer.runIterations(const availableOps: word);
 var
     remainingOps: word;
+begin
+    remainingOps := availableOps;
+    while (remainingOps > 0) do
+    begin
+        dec(remainingOps);
+        iteration;
+    end;
+end;
+
+procedure TProducer.iteration;
 begin
     if (state = INACTIVE) then exit;
 
@@ -38,30 +49,25 @@ begin
         exit;
     end;
 
-    remainingOps := availableOps;
-    while (remainingOps > 0) do
+    if (currentNumber <= 2) then
     begin
-        dec(remainingOps);
-        if (currentNumber <= 2) then
-        begin
-            increaseNumber(true);
-            continue;
-        end;
-
-        if (currentDividor > maxDividor) then
-        begin
-            increaseNumber(true);
-            continue;
-        end;
-
-        if (currentNumber mod currentDividor = 0) then
-        begin
-            increaseNumber(false);
-            continue;
-        end;
-
-        inc(currentDividor);
+        increaseNumber(true);
+        exit;
     end;
+
+    if (currentDividor > maxDividor) then
+    begin
+        increaseNumber(true);
+        exit;
+    end;
+
+    if (currentNumber mod currentDividor = 0) then
+    begin
+        increaseNumber(false);
+        exit;
+    end;
+
+    inc(currentDividor);
 end;
 
 procedure TProducer.increaseNumber(isCurrentPrime: boolean);
