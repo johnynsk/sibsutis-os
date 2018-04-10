@@ -17,6 +17,8 @@ public
     procedure iteration; virtual;
     procedure enable; virtual;
     procedure disable; virtual;
+    function getCurrentDividor: longint;
+    function getCurrentNumber: longint;
     constructor construct(newQueue: PTQueue);
 end;
 
@@ -81,7 +83,7 @@ end;
 
 procedure TProducer.enable;
 begin
-    if (state = INACTIVE) then state := oldState;
+    if (state = INACTIVE) then if (oldState = INACTIVE) then state := ACTIVE else state := oldState;
 end;
 
 procedure TProducer.disable;
@@ -93,10 +95,22 @@ begin
   end;
 end;
 
+function TProducer.getCurrentDividor: longint;
+begin
+    getCurrentDividor := currentDividor;
+end;
+
+function TProducer.getCurrentNumber: longint;
+begin
+    getCurrentNumber := currentNumber;
+end;
+
 constructor TProducer.construct(newQueue: PTQueue);
 begin
     state := INACTIVE;
     currentNumber := 1;
+    speedStep := 1;
+    speed := 1;
     increaseNumber(false);
     queue := newQueue;
 end;

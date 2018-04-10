@@ -11,15 +11,14 @@ private
     messageLength: byte;
     color: byte;
     startX, startY: integer;
-    tickDelay: integer;
     counter: word;
     screenPosition: TPosition;
     beforeRenderRow, afterRenderRow: PTVideoRow;
     procedure videoRestore;
     procedure render;
 public
-    procedure setTickDelay(newTickDelay: integer);
-    function getTickDelay: integer;
+    procedure decreaseSpeed; virtual;
+    procedure increaseSpeed; virtual;
     procedure iteration; virtual;
     constructor construct(newMessage: string; newScreenPosition: TPosition; newStartX: integer; newColor: byte);
 end;
@@ -27,6 +26,8 @@ end;
 
 implementation
 uses crt, dos;
+
+const MAX_SPEED = 40;
 
 procedure TTicker.videoRestore;
 var
@@ -50,15 +51,30 @@ var
     i: integer;
     textPosition: integer;
     screen: TVideoMemory absolute $b800:$0000;
+    newRow: TVideoRow;
 begin
     for i := 1 to 80 do
     begin
-        if (i <= startX) then continue;
-        if (i > startX + messageLength) then continue;
-        textPosition := i - startX;
+        newRow[i] := screen[startY, i];
 
-        screen[startY, i].symbol := message[textPosition];
-        screen[startY, i].attr := color;
+        if ((afterRenderRow^[i].attr xor newRow[i].attr = 0)
+            and (ord(afterRenderRow^[i].symbol) xor ord(newRow[i].symbol) = 0))
+        then begin
+            newRow[i] := beforeRenderRow^[i];
+        end;
+
+        beforeRenderRow^[i] := newRow[i];
+
+        if ((i > startX) and (i <= startX + messageLength)) then
+        begin
+            textPosition := i - startX;
+
+            newRow[i].symbol := message[textPosition];
+            newRow[i].attr := color;
+        end;
+
+        afterRenderRow^[i] := newRow[i];
+        screen[startY, i] := newRow[i];
     end;
 end;
 
@@ -66,27 +82,33 @@ procedure TTicker.iteration;
 begin
     if (state = INACTIVE) then exit;
     inc(counter);
-    if (counter mod tickDelay <> 0) then exit;
+    if (counter mod speed <> 0) then exit;
 
-    videoRestore;
-    copyRow(startY, beforeRenderRow);
     render;
-    copyRow(startY, afterRenderRow);
 
     dec(startX);
     if ((startX + messageLength) <= 0) then startX := 80;
       counter := 0;
 end;
 
-procedure TTicker.setTickDelay(newTickDelay: integer);
+procedure TTicker.increaseSpeed;
 begin
-    counter := 0;
-    tickDelay := newTickDelay;
+    if ((speed + speedStep) > MAX_SPEED) then
+    begin
+        speed := MAX_SPEED;
+        exit;
+    end;
+    speed := speed + speedStep;
 end;
 
-function TTicker.getTickDelay: integer;
+procedure TTicker.decreaseSpeed;
 begin
-    getTickDelay := tickDelay;
+    if ((speed - speedStep) <= 0) then
+    begin
+        speed := 1;
+        exit;
+    end;
+    speed := speed - speedStep;
 end;
 
 constructor TTicker.construct(newMessage: string; newScreenPosition: TPosition; newStartX: integer  ; newColor: byte);
@@ -94,15 +116,16 @@ begin
     new(beforeRenderRow);
     new(afterRenderRow);
     screenPosition := newScreenPosition;
-    message := newMessage;
+    message := ' ' + newMessage + ' ';
     messageLength := length(message);
     color := newColor;
 
     if (screenPosition = TICKER_TOP) then startY := 1 else startY := 25;
 
     startX := newStartX;
-    tickDelay := 4;
     counter := 0;
+    speed := 4;
+    speedStep := 1;
 
     state := INACTIVE;
 end;

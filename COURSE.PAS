@@ -1,7 +1,27 @@
 {$M 16384,0,655360}
 {Music, clocks, prime numbers, textbanner}
 program course;
-uses dos, crt, sounds, clocks, term, queue, producer, consumer, ticker, stream, streamin;
+uses dos, crt, sounds, clocks, term, queue, producer, consumer, ticker, stream, streamin, buffer;
+
+type
+    PTMain = ^TMain;
+    TMain = Object(TStream)
+  public
+    constructor construct;
+    end;
+
+    PTMainInfo = ^TMainInfo;
+    TMainInfo = Object(TStreamInfo)
+  private
+    _clocks: PTClocks;
+    _sound: PTSound;
+    _ticker: PTTicker;
+    _consumer: PTConsumer;
+    _producer: PTProducer;
+  public
+    procedure handleKey(keyChar: string); virtual;
+    procedure setInstances(cl: PTClocks; s: PTSound; t: PTTicker; cons: PTConsumer; prod: PTProducer);
+    end;
 
 var
     oldTimerHandler: procedure;
@@ -9,13 +29,16 @@ var
     counter: word;
     flagExit, flagKeyboard, flagTimer: boolean;
 
-    mainInstance: PTStream;
-    mainInfo: PTStreamInfo;
+    mainInstance: PTMain;
+    mainInfo: PTMainInfo;
 
     producerInfo, consumerInfo: PTStreamInfo;
     producerInstance: PTProducer;
     consumerInstance: PTConsumer;
     numbersQueue: PTQueue;
+
+    bufferInstance: PTBuffer;
+    bufferInfo: PTStreamInfo;
 
     clocksInfo, soundInfo, tickerInfo: PTStreamInfo;
     tickerInstance: PTTicker;
@@ -34,6 +57,22 @@ begin
     clrScr;
     halt;
 end;
+
+procedure renderQueueStatus;
+var
+    items: string;
+    usage: string;
+    number: string;
+    dividor: string;
+begin
+    str(numbersQueue^.getLength: 3, items);
+    str((numbersQueue^.getUsage * 100): 4: 1, usage);
+    str(producerInstance^.getCurrentNumber: 6, number);
+    str(producerInstance^.getCurrentDividor: 6, dividor);
+    writeLine(' Buffer usage: ' + items + ' items (' + usage + '%) ', 44, 14, Green shl 4 + Yellow);
+    writeLine(' Current number: ' + number + ', dividor = ' + dividor + ' ', 35, 24, Green shl 4 + Yellow);
+end;
+
 procedure timerHandler; interrupt;
 var clockTime:string;
 begin
@@ -50,6 +89,15 @@ begin
     clocksInstance^.iteration;
     soundInstance^.iteration;
     tickerInstance^.iteration;
+
+    clocksInfo^.update;
+    soundInfo^.update;
+    tickerInfo^.update;
+    consumerInfo^.update;
+    producerInfo^.update;
+
+    renderQueueStatus;
+
     flagTimer := false;
     inline($9C);
     oldTimerHandler;
@@ -58,6 +106,7 @@ end;
 procedure keyHandler; interrupt;
 var
     keyCode: word;
+    keyChar: string[2];
     special: byte absolute $40:$17;
 begin
     if (flagKeyboard) then
@@ -70,31 +119,29 @@ begin
     flagKeyboard := true;
     keyCode := Port[$60];
 
-    if ((keyCode = KEY_T) and (special = KEY_CTRL)) then
-        if (clocksInstance^.getState = ACTIVE) then clocksInstance^.disable else clocksInstance^.enable;
+    keyChar := getKeyChar(keyCode, special);
 
-    if ((keyCode = KEY_W) and (special = KEY_CTRL)) then
-        if (soundInstance^.getState = ACTIVE) then soundInstance^.disable else soundInstance^.enable;
+    clocksInfo^.handleKey(keyChar);
+    soundInfo^.handleKey(keyChar);
+    tickerInfo^.handleKey(keyChar);
+    consumerInfo^.handleKey(keyChar);
+    producerInfo^.handleKey(keyChar);
+    mainInfo^.handleKey(keyChar);
+    bufferInfo^.handleKey(keyChar);
 
-    if ((keyCode = KEY_ESC) or (keyCode = KEY_Q)) then
-    begin
-        flagExit := false;
-        {mainInstance^.disable;}
-    end;
+    if (mainInstance^.getState = INACTIVE) then flagExit := false;
 
-    clocksInfo^.update;
-    soundInfo^.update;
-{
-    tickerInfo^.update;
-    consumerInfo^.update;
-    producerInfo^.update;
-}
     flagKeyboard := false;
 
     inline($9C);
     oldKeyHandler;
 end;
 {$F-}
+
+constructor TMain.construct;
+begin
+    enable;
+end;
 
 procedure printUsage;
 begin
@@ -140,7 +187,7 @@ begin
     clocksInstance^.enable;
 
     new(clocksInfo);
-    clocksInfo^.construct(clocksInstance, 'CLOCK', '^T', 6, 5);
+    clocksInfo^.construct(clocksInstance, 'CLOCK', 'C', 4, 4);
 end;
 
 procedure initSound;
@@ -149,7 +196,7 @@ begin
     soundInstance^.construct;
 
     new(soundInfo);
-    soundInfo^.construct(soundInstance, 'SOUND', 'Y', 6, 11);
+    soundInfo^.construct(soundInstance, 'SOUND', 'X', 23, 9);
 end;
 
 procedure initProducerAndConsumer;
@@ -163,7 +210,7 @@ begin
     producerInstance^.enable;
 
     new(producerInfo);
-    producerInfo^.construct(producerInstance, 'PROD', '<', 25, 5);
+    producerInfo^.construct(producerInstance, 'PRODUCER', '<', 23, 4);
     producerInfo^.setAdjustInfo('M', '>');
 
     new(consumerInstance);
@@ -171,8 +218,15 @@ begin
     consumerInstance^.enable;
 
     new(consumerInfo);
-    consumerInfo^.construct(consumerInstance, 'CONS', 'K', 44, 5);
+    consumerInfo^.construct(consumerInstance, 'CONSUMER', 'K', 42, 4);
     consumerInfo^.setAdjustInfo('J', 'L');
+
+    new(bufferInstance);
+    bufferInstance^.construct(numbersQueue);
+    bufferInstance^.enable;
+    new(bufferInfo);
+    bufferInfo^.construct(bufferInstance, 'BUFFER', '', 61, 9);
+    bufferInfo^.setAdjustInfo('T', 'Y');
 end;
 
 procedure initTicker;
@@ -192,23 +246,44 @@ begin
     message := 'Evgeniy Vasilev. Student of SIBSUTIs, member of group ZP-51 info+sibsutis@evgeniyvasilev.ru';
 
     new(tickerInstance);
-    tickerInstance^.construct(message, TICKER_TOP, 80, yellow shl 2 + black);
-    tickerInstance^.setTickDelay(1);
+    tickerInstance^.construct(message, screenPosition, 80, yellow shl 2 + black);
     tickerInstance^.enable;
 
     new(tickerInfo);
-    tickerInfo^.construct(tickerInstance, 'TICKER', 'I', 63, 5);
-    tickerInfo^.setAdjustInfo('U', 'P');
+    tickerInfo^.construct(tickerInstance, 'TICKER', 'I', 61, 4);
+    tickerInfo^.setAdjustInfo('U', 'O');
+end;
+
+procedure TMainInfo.setInstances(cl: PTClocks; s: PTSound; t: PTTicker; cons: PTConsumer; prod: PTProducer);
+begin
+    _clocks := cl;
+    _sound := s;
+    _ticker := t;
+    _consumer := cons;
+    _producer := prod;
+end;
+
+procedure TMainInfo.handleKey(keyChar: string);
+begin
+    if ((keyChar = toggleKey) or (keyChar = '~E') or (keyChar = '^C')) then mainInstance^.disable;
+
+    if (clocksInstance^.getState <> INACTIVE) then exit;
+    if (soundInstance^.getState <> INACTIVE) then exit;
+    if (tickerInstance^.getState <> INACTIVE) then exit;
+    if (consumerInstance^.getState <> INACTIVE) then exit;
+    if (producerInstance^.getState <> INACTIVE) then exit;
+    mainInstance^.disable;
 end;
 
 procedure construct;
 begin
-  {
     new(mainInstance);
     new(mainInfo);
+    mainInstance^.construct;
     mainInstance^.enable;
-    mainInfo^.construct(mainInstance, 'PROGRAM', 'Q', 25, 5);
-}
+    mainInfo^.construct(mainInstance, 'PROGRAM', 'Q', 42, 9);
+    mainInfo^.update;
+
     flagExit := true;
     flagKeyboard := false;
     flagTimer := false;
@@ -218,7 +293,39 @@ begin
     setIntVec($9, addr(keyHandler));
 end;
 
+procedure loop;
+var
+    producerSpeed, consumerSpeed, sumSpeed:word;
 begin
+    while (flagExit) do
+    begin
+        sumSpeed := 0;
+        if (producerInstance^.getState <> INACTIVE) then sumSpeed := producerInstance^.getSpeed;
+        if (consumerInstance^.getState <> INACTIVE) then sumSpeed := consumerInstance^.getSpeed;
+        delay(300);
+
+        if ((random(2) = 0) and (producerInstance^.getState <> INACTIVE))
+        then begin
+            producerInstance^.runIterations(producerInstance^.getSpeed);
+            writeLine(' Current stream: producer ', 4, 24, Red shl 4 + Blue);
+            continue;
+        end;
+
+        if (consumerInstance^.getState <> INACTIVE) then
+        begin
+            consumerInstance^.runIterations(consumerInstance^.getSpeed);
+            writeLine(' Current stream: consumer ', 4, 24, Brown shl 4 + Black);
+            continue;
+        end;
+
+        producerInstance^.runIterations(producerInstance^.getSpeed);
+        writeLine(' Current stream: producer ', 4, 24, Red shl 4 + Black);
+
+    end;
+end;
+
+begin
+    randomize;
     initClock;
     initSound;
     initProducerAndConsumer;
@@ -230,16 +337,9 @@ begin
     tickerInfo^.update;
     consumerInfo^.update;
     producerInfo^.update;
+    bufferInfo^.update;
 
     construct;
-    {while (mainInstance^.getState <> INACTIVE) do}
-    while (flagExit) do
-    begin
-        producerInstance^.runIterations(3);
-        consumerInstance^.runIterations(2);
-        {tickerInstance2.iteration;}
-        delay(100);
-    end;
-
+    loop;
     destruct;
 end.

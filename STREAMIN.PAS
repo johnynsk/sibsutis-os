@@ -7,8 +7,7 @@ type
 PTStreamInfo = ^TStreamInfo;
 TStreamInfo = Object
 private
-    streamName: string[6];
-    toggleKey: string[2];
+    streamName: string[9];
     isAdjustable, isShowed: boolean;
     stream: PTStream;
     oldState: TStatus;
@@ -20,7 +19,9 @@ private
     decreaseKey: string[2];
     increaseKey: string[2];
 public
+    toggleKey: string[2];
     procedure update;
+    procedure handleKey(keyChar: string); virtual;
     procedure setAdjustInfo(newDecreaseKey, newIncreaseKey: string);
     constructor construct(newStream: PTStream; newStreamName, newToggleKey: string; newPosX, newPosY: integer);
 end;
@@ -35,17 +36,39 @@ begin
     increaseKey := newIncreaseKey;
 end;
 
+procedure TStreamInfo.handleKey(keyChar: string);
+begin
+    if (keyChar = toggleKey) then
+    begin
+        if (stream^.state <> INACTIVE) then stream^.disable else stream^.enable;
+        exit;
+    end;
+
+    if (keyChar = decreaseKey) then
+    begin
+        stream^.decreaseSpeed;
+        exit;
+    end;
+
+    if (keyChar = increaseKey) then
+    begin
+        stream^.increaseSpeed;
+        exit;
+    end;
+end;
+
 procedure TStreamInfo.update;
 var
     screen: TVideoMemory absolute $b800:$0000;
     lines: word;
     i, j: integer;
-    streamStatusString: string;
+    streamStatusString, currentSpeed: string;
     color: byte;
 begin
     if ((stream^.getState = oldState) and (stream^.getSpeed = oldSpeed) and (isShowed)) then exit;
     oldState := stream^.getState;
     oldSpeed := stream^.getSpeed;
+    isShowed := true;
 
     if (oldState = ACTIVE) then
     begin
@@ -60,21 +83,28 @@ begin
         color := (Blue shl 4) + White;
     end;
 
-    lines := 1;
-    if (isAdjustable) then lines := 2;
+    lines := 2;
+    if (isAdjustable) then lines := 3;
 
-    for i := -1 to lines + 1 do
+    for i := 0 to lines do
     begin
-        for j := -1 to 15 do
+        for j := 0 to 15 do
         begin
             screen[posY + i, posX + j].attr := color;
             screen[posY + i, posX + j].symbol := ' ';
         end;
     end;
 
-    writeLine(streamStatusString, posX, posY, color);
-    writeLine(streamName, posX + 5, posY, color);
-    writeLine(toggleKey, posX, posY + 1, color);
+    showBox(posX, posY, posX + 15, posY + lines);
+    writeLine(' ' + streamName + ' ', posX + 2, posY, color);
+    writeLine(streamStatusString, posX + 11, posY + 1, color);
+    writeLine(toggleKey, posX + 2, posY + 1, color);
+
+    if (not isAdjustable) then exit;
+    str(stream^.getSpeed: 3, currentSpeed);
+    writeLine(decreaseKey, posX + 2, posY + 2, color);
+    writeLine(currentSpeed, posX + 5, posY + 2, color);
+    writeLine(increaseKey, posX + 11, posY + 2, color);
 end;
 
 constructor TStreamInfo.construct(newStream: PTStream; newStreamName, newToggleKey: string; newPosX, newPosY: integer);

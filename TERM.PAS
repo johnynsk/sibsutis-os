@@ -23,7 +23,8 @@ procedure writeLine(const str: string; const x, y: integer; color: byte);
 procedure printGrid;
 procedure render;
 procedure copyRow(rowNumber: word; result: PTVideoRow);
-function getKeyChar: string;
+procedure showBox(x1, y1, x2, y2: integer);
+function getKeyChar(keyCode: word; special: byte): String;
 
 implementation
 
@@ -83,14 +84,67 @@ begin
     end;
 end;
 
-function getKeyChar: String;
+function getKeyChar(keyCode: word; special: byte): String;
 var
-    special: byte absolute $40:$17;
-    keyCode: word;
+    keyChar: string[2];
 begin
-    getKeyChar := '';
+    keyChar := '';
+
     case keyCode of
-        KEY_Q: getKeyChar := 'q';
+        KEY_ESC: keyChar := '~E';
+        144: keyChar := 'Q';
+
+        173: keyChar := 'X';
+        174: if (special and KEY_CTRL = KEY_CTRL) then keyChar := '^C' else keyChar := 'C';
+
+        178: keyChar := 'M';
+        179: keyChar := '<';
+        180: keyChar := '>';
+
+        164: keyChar := 'J';
+        165: keyChar := 'K';
+        166: keyChar := 'L';
+
+        148: keyChar := 'T';
+        149: keyChar := 'Y';
+
+        150: keyChar := 'U';
+        151: keyChar := 'I';
+        152: keyChar := 'O';
+    end;
+
+    getKeyChar := keyChar;
+end;
+
+procedure showBox(x1, y1, x2, y2: integer);
+var
+    i: word;
+    screen: TVideoMemory absolute $b800:$0000;
+begin
+    for i := (x1 + 1) to (x2 - 1) do
+    begin
+        if ((i <= 0) or (i > 80)) then continue;
+        screen[y1, i].symbol := chr(196);
+        screen[y2, i].symbol := chr(196);
+    end;
+
+    for i := (y1 + 1) to (y2 - 1) do
+    begin
+        if ((i <= 0) or (i > 25)) then continue;
+        screen[i, x1].symbol := chr(179);
+        screen[i, x2].symbol := chr(179);
+    end;
+
+    if ((x1 > 0) and (x1 <= 80)) then
+    begin
+        if ((y1 > 0) and (y1 <= 25)) then screen[y1, x1].symbol := chr(218);
+        if ((y2 > 0) and (y2 <= 25)) then screen[y2, x1].symbol := chr(192);
+    end;
+
+    if ((x2 > 0) and (x2 <= 80)) then
+    begin
+        if ((y1 > 0) and (y1 <= 25)) then screen[y1, x2].symbol := chr(191);
+        if ((y2 > 0) and (y2 <= 25)) then screen[y2, x2].symbol := chr(217);
     end;
 end;
 
@@ -100,39 +154,13 @@ begin
     clrScr;
 
     printGrid;
-{}
 
-    {
-    window(2, 2, 38, 17);
-    textBackGround(Red);
-    clrScr;
-    textColor(White);
-    gotoXY(3, 1);
-    write('left pane');
-    window(3, 3, 37, 16);
-    textBackGround(Black);
-    clrScr;
-    writeLine('stream  1:', 3, 3);
-    writeLine('stream 2:', 3, 4);
-
-    window(40, 2, 79, 17);
-    textBackGround(Yellow);
-    clrScr;
-    textColor(White);
-    gotoXY(4, 1);
-    write('right pane');
-    window(41, 3, 78, 16);
-    textBackGround(Black);
-    clrScr;
-    writeLine('stream 1:', 41, 3);
-    writeLine('stream 4 :', 41, 4);
-}
-    {usage}
-
-    window(3, 16, 78, 24);
+    window(3, 15, 78, 23);
     textBackGround(LightGray);
     textColor(Black);
     clrScr;
+    showBox(2, 14, 79, 24);
+    writeLine(' Consumer output ', 5, 14, blue shl 4 + yellow);
 end;
 
 begin

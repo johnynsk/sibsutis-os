@@ -55,7 +55,7 @@ end;
 
 procedure TConsumer.enable;
 begin
-    if (state = INACTIVE) then state := oldState;
+    if (state = INACTIVE) then if (oldState = INACTIVE) then state := ACTIVE else state := oldState;
 end;
 
 procedure TConsumer.disable;
@@ -71,6 +71,8 @@ constructor TConsumer.construct(newQueue: PTQueue);
 begin
     state := INACTIVE;
     writed := 0;
+    speedStep := 1;
+    speed := 1;
     oldState := ACTIVE;
     queue := newQueue;
 end;

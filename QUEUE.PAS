@@ -20,9 +20,10 @@ public
   function isEmpty: boolean;
   function isFull: boolean;
   function getHead: PTQueueRecord;
-  function getFullness: real;
+  function getUsage: real;
   function getLength: word;
   procedure setMaxLength(newMaxLength: word);
+  function getMaxLength: word;
   constructor construct;
 end;
 
@@ -82,9 +83,9 @@ begin
     isEmpty := length = 0;
 end;
 
-function TQueue.getFullness: Real;
+function TQueue.getUsage: Real;
 begin
-    getFullness := length / maxLength * 100;
+    getUsage := length / maxLength;
 end;
 
 procedure TQueue.setMaxLength(newMaxLength: word);
@@ -95,6 +96,11 @@ end;
 function TQueue.getLength: word;
 begin
     getLength := length;
+end;
+
+function TQueue.getMaxLength: word;
+begin
+    getMaxLength := maxLength;
 end;
 
 constructor TQueue.construct;

@@ -22,6 +22,8 @@ implementation
 
 uses crt, dos;
 
+const MAX_SPEED = 300;
+
 procedure TStream.enable;
 begin
     state := ACTIVE;
@@ -39,21 +41,24 @@ end;
 
 procedure TStream.iteration;
 begin
+    {noop}
 end;
 
 function TStream.getSpeed: integer;
 begin
-    getSpeed := 5;
+    getSpeed := speed;
 end;
 
 procedure TStream.decreaseSpeed;
 begin
     speed := speed - speedStep;
+    if (speed < 0) then speed := 0;
 end;
 
 procedure TStream.increaseSpeed;
 begin
     speed := speed + speedStep;
+    if (speed > MAX_SPEED) then speed := 300;
 end;
 
 begin
